@@ -9,5 +9,5 @@ Website = http://howsthebeach.org
 Description = Kill Devil Hills specific nexrad data processing.
 
 [Settings]
-ini_file=/home/xeniaprod/scripts/ShellfishNEXRAD/config/shellfish_nexrad_debug.ini
-log_config=/home/xeniaprod/scripts/ShellfishNEXRAD/config/logconf/dhec_shellfish_nexrad_plugin.conf
+ini_file=/Users/danramage/Documents/workspace/WaterQuality/DHEC-Utilities/config/shellfish_nexrad_debug.ini
+log_config=/Users/danramage/Documents/workspace/WaterQuality/DHEC-Utilities/config/logconf/dhec_shellfish_nexrad_plugin_debug.conf
