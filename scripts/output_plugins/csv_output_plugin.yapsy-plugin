@@ -9,5 +9,5 @@ Website = http://howsthebeach.org
 Description = Kill Devil Hills specific water quality processing.
 
 [Settings]
-csv_outfile=/home/xeniaprod/feeds/dhec/precipitation/$date-shellfish_precip.csv
+csv_outfile=/Users/danramage/tmp/$date-shellfish_precip.csv
 use_logging=True

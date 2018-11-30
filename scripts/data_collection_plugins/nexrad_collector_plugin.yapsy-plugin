@@ -1,0 +1,13 @@
+[Core]
+Name = NEXRAD Data Collector Plugin
+Module = nexrad_collector_plugin
+
+[Documentation]
+Author = Dan Ramage
+Version = 0.1
+Website = http://howsthebeach.org
+Description = Kill Devil Hills specific nexrad data processing.
+
+[Settings]
+ini_file=/Users/danramage/Documents/workspace/WaterQuality/DHEC-Utilities/config/shellfish_nexrad_debug.ini
+log_config=/Users/danramage/Documents/workspace/WaterQuality/DHEC-Utilities/config/logconf/dhec_shellfish_nexrad_plugin_debug.conf
