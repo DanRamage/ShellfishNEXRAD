@@ -1,0 +1,13 @@
+[Core]
+Name = WQ CSV File Plugin
+Module = csv_output_plugin
+
+[Documentation]
+Author = Dan Ramage
+Version = 0.1
+Website = http://howsthebeach.org
+Description = Kill Devil Hills specific water quality processing.
+
+[Settings]
+csv_outfile=/Users/danramage/tmp/$date-shellfish_precip.csv
+use_logging=True
