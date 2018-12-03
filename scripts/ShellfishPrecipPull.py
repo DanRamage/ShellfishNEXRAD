@@ -22,7 +22,8 @@ PRECIP_MULTIPLIER = .01
 SECONDS_IN_DAY = 60 * 60 * 24
 
 def ftp_file(src_filename, ftp_address, destination_dir, username, password):
-    logger = logging.getLogger(__name__)c
+    ret_val = False
+    logger = logging.getLogger(__name__)
     start_time = time.time()
     try:
         src_stats = os.stat(src_filename)
@@ -37,14 +38,16 @@ def ftp_file(src_filename, ftp_address, destination_dir, username, password):
         ret_attributes = ftp.put(src_filename, dest_file)
         if ret_attributes.st_size == src_stats.st_size:
             logger.debug("FTPd file: %s in %f seconds." % (dest_file, time.time() - start_time))
+            ret_val = True
         else:
             logger.error("FTPd file: %s src bytes: %d don't match dest bytes: %d in %f seconds." % (dest_file,
                                                                                                     src_stats.st_size, ret_attributes.st_size,
                                                                                                     time.time() - start_time))
-
         ssh.close()
     except Exception as e:
         logger.exception(e)
+
+    return ret_val
 
 def download_file(source_url, destination_directory):
     logger = logging.getLogger(__name__)
@@ -69,7 +72,7 @@ def download_file(source_url, destination_directory):
         logger.exception(e)
     return None
 
-def email_results(host, user, password, to_list, email_from, data_file, test_results):
+def email_results(host, user, password, to_list, email_from, data_file, test_results, ftp_destination_file):
   try:
     logger = logging.getLogger(__name__)
     logger.info("Emailing: %s" % (to_list))
@@ -89,6 +92,12 @@ def email_results(host, user, password, to_list, email_from, data_file, test_res
       if test_results[id]['TestPassed']:
         row = "\tID: %s Date: %s Value: %s is not over limit." % (id, test_results[id]['Date'], test_results[id]['Precipitation Value'])
         message.append(row)
+    if ftp_destination_file is not None:
+        if len(ftp_destination_file):
+            message.append("\nFTP File: %s successfully transfered" % (ftp_destination_file))
+        else:
+            message.append("\nFTP File transfer error")
+
     email_obj = smtpClass(host=host, user=user, password=password)
     email_obj.subject('[SHELLFISH]CSV Data File')
     email_obj.rcpt_to(to_list)
@@ -251,8 +260,12 @@ def main():
             logger = logging.getLogger(__name__)
             logger.info("Logging started.")
         data_file = download_file(options.source_url, options.dest_dir)
+        ftp_dest_file = None
         if options.ftp_url is not None:
-            ftp_file(data_file, options.ftp_url, options.ftp_directory, options.ftp_user, options.ftp_password)
+            ftp_dest_file = ''
+            if ftp_file(data_file, options.ftp_url, options.ftp_directory, options.ftp_user, options.ftp_password):
+                ftp_dest_file = os.path.join(options.ftp_directory, os.path.split(data_file)[1])
+
         if data_file is not None:
             test_results = parse_file(data_file, today)
             email_results(options.email_server,
@@ -260,7 +273,9 @@ def main():
                         options.email_pwd,
                         options.to_list.split(','),
                         options.email_from,
-                        data_file, test_results)
+                        data_file,
+                        test_results,
+                        ftp_dest_file)
             #Save results into our database
             if options.db_file is not None:
                 save_to_database(test_results, options.db_file)
