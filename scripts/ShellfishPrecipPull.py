@@ -264,9 +264,9 @@ def main():
         if options.ftp_url is not None:
             ftp_dest_file = ''
             cur_date = datetime.now()
-            dest_dir_templt = Template(options.ftp_directory)
-            dest_dir = dest_dir_templt.substitute({'year': cur_date.year})
-            if ftp_file(data_file, options.ftp_url, options.ftp_directory, options.ftp_user, options.ftp_password):
+            dest_dir = "%s %d" % (options.ftp_directory, cur_date.year)
+            logger.debug("Destination dir: %s" % (dest_dir))
+            if ftp_file(data_file, options.ftp_url, dest_dir, options.ftp_user, options.ftp_password):
                 ftp_dest_file = os.path.join(dest_dir, os.path.split(data_file)[1])
 
         if data_file is not None:
