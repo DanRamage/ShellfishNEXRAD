@@ -12,6 +12,7 @@ from collections import OrderedDict
 import logging.config
 from string import Template
 import paramiko
+from string import Template
 from stat import *
 from xeniaSQLiteAlchemy import xeniaAlchemy as sqliteAlchemy
 from xeniaSQLiteAlchemy import multi_obs, platform
@@ -263,8 +264,11 @@ def main():
         ftp_dest_file = None
         if options.ftp_url is not None:
             ftp_dest_file = ''
+            cur_date = datetime.now()
+            dest_dir_templt = Template(options.ftp_directory)
+            dest_dir = dest_dir_templt.substitute({'year': cur_date.year})
             if ftp_file(data_file, options.ftp_url, options.ftp_directory, options.ftp_user, options.ftp_password):
-                ftp_dest_file = os.path.join(options.ftp_directory, os.path.split(data_file)[1])
+                ftp_dest_file = os.path.join(dest_dir, os.path.split(data_file)[1])
 
         if data_file is not None:
             test_results = parse_file(data_file, today)
