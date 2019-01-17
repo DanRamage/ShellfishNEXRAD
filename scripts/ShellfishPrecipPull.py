@@ -12,7 +12,6 @@ from collections import OrderedDict
 import logging.config
 from string import Template
 import paramiko
-from string import Template
 from stat import *
 from xeniaSQLiteAlchemy import xeniaAlchemy as sqliteAlchemy
 from xeniaSQLiteAlchemy import multi_obs, platform
