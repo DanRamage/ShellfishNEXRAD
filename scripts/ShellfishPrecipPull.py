@@ -12,7 +12,11 @@ from collections import OrderedDict
 import logging.config
 from string import Template
 import paramiko
-from stat import *
+import requests
+import json
+from requests_oauthlib import OAuth2Session
+from oauthlib.oauth2 import MobileApplicationClient
+
 from xeniaSQLiteAlchemy import xeniaAlchemy as sqliteAlchemy
 from xeniaSQLiteAlchemy import multi_obs, platform
 
@@ -65,14 +69,14 @@ def download_file(source_url, destination_directory):
         with open(dest_path, 'w') as f:
           for chunk in r.iter_content(chunk_size=1024):
             if chunk:  # filter out keep-alive new chunks
-              f.write(chunk)
+              f.write(chunk.decode('UTF-8'))
           logger.info("Downloaded: %s successfully in %f seconds" % (dest_path, time.time()-start_time))
           return dest_path
     except Exception as e:
         logger.exception(e)
     return None
 
-def email_results(host, user, password, to_list, email_from, data_file, test_results, ftp_destination_file):
+def email_results(host, port, user, password, to_list, email_from, data_file, test_results, ftp_destination_file):
   try:
     logger = logging.getLogger(__name__)
     logger.info("Emailing: %s" % (to_list))
@@ -98,7 +102,7 @@ def email_results(host, user, password, to_list, email_from, data_file, test_res
         else:
             message.append("\nFTP File transfer error")
 
-    email_obj = smtpClass(host=host, user=user, password=password)
+    email_obj = smtpClass(host=host, user=user, password=password, port=port, use_tls=True)
     email_obj.subject('[SHELLFISH]CSV Data File')
     email_obj.rcpt_to(to_list)
     email_obj.from_addr(email_from)
@@ -221,6 +225,59 @@ def save_to_database(results, database_file):
                                                                            obs_rec.m_date,
                                                                            obs_rec.m_value))
 
+def authorize_one_drive(tenant_id, client_id):
+    scopes = ['Sites.ReadWrite.All', 'Files.ReadWrite.All']
+    auth_url = 'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize'.format(tenant_id=tenant_id)
+
+    # OAuth2Session is an extension to requests.Session
+    # used to create an authorization url using the requests.Session interface
+    # MobileApplicationClient is used to get the Implicit Grant
+
+    oauth = OAuth2Session(client=MobileApplicationClient(client_id=client_id), scope=scopes)
+    authorization_url, state = oauth.authorization_url(auth_url)
+    consent_link = oauth.get(authorization_url)
+    print(consent_link.url)
+
+def copy_to_onedrive(src_filename, year, one_drive_user, tenant_id, client_id, client_secret):
+    logger = logging.getLogger(__name__)
+
+    try:
+        #authorize_one_drive(tenant_id, client_id)
+        URL = "https://login.microsoftonline.com/{tenant_domain_name}/oauth2/V2.0/token".format(tenant_domain_name=tenant_id)
+        data = {
+            'grant_type': 'client_credentials',
+            'scope': 'https://graph.microsoft.com/.default',
+            'client_id': client_id,
+            'client_secret': client_secret
+        }
+        r = requests.post(url=URL, data=data)
+        j = json.loads(r.text)
+        TOKEN = j["access_token"]
+
+        URL = "https://graph.microsoft.com/v1.0/users/{tenant_domain_name}/drive/root:".format(tenant_domain_name=tenant_id)
+        headers = {'Authorization': "Bearer " + TOKEN}
+        r = requests.get(URL, headers=headers)
+        j = json.loads(r.text)
+
+        with open(src_filename, 'r') as file_handle:
+            file_path, filename = os.path.split(src_filename)
+            full_url = URL + "/" + filename + ":/content"
+            logger.debug("Uploading file: {src_file} to {url}".format(src_file=src_filename, url=full_url))
+            r = requests.put(full_url, data=file_handle, headers=headers)
+            if r.status_code == 200 or r.status_code == 201:
+                logger.debug("File: {filename} successfully uploaded.".format(filename=src_filename))
+            else:
+                logger.error("File: {filename} failed to upload. Status Code: {code}"
+                             .format(filename=src_filename, code=r.status_code))
+        '''
+        if r.status_code == 200 or r.status_code == 201:
+            # remove folder contents
+            print("succeeded, removing original file...")
+            os.remove(os.path.join(root, filename))
+        '''
+    except Exception as e:
+        logger.exception(e)
+    return
 def main():
     parser = optparse.OptionParser()
     parser.add_option("--SourceURL", dest="source_url",
@@ -233,6 +290,8 @@ def main():
                     help="Email address used for the from field.")
     parser.add_option("--EmailServer", dest="email_server",
                     help="Email address used for the from field.")
+    parser.add_option("--EmailServerPort", dest="server_port", type="int",
+                    help="Email server port used for the from field.")
     parser.add_option("--EmailUser", dest="email_user",
                     help="User account used for sending email.")
     parser.add_option("--EmailPwd", dest="email_pwd",
@@ -249,6 +308,14 @@ def main():
                     help="Password for the FTP server.")
     parser.add_option("--FTPDirectory", dest="ftp_directory",
                     help="Directory to store files on the FTP server.")
+    parser.add_option("--OneDriveClientID", dest="one_drive_client_id", default=None,
+                    help="")
+    parser.add_option("--OneDriveSecret", dest="one_drive_secret", default=None,
+                    help="")
+    parser.add_option("--OneDriveUser", dest="one_drive_user", default=None,
+                    help="")
+    parser.add_option("--OneDriveTenantID", dest="one_drive_tenant_id", default=None,
+                    help="")
     (options, args) = parser.parse_args()
 
     today = datetime.now()
@@ -268,10 +335,19 @@ def main():
             logger.debug("Destination dir: %s" % (dest_dir))
             if ftp_file(data_file, options.ftp_url, dest_dir, options.ftp_user, options.ftp_password):
                 ftp_dest_file = os.path.join(dest_dir, os.path.split(data_file)[1])
-
+        if options.one_drive_client_id is not None:
+            cur_date = datetime.now()
+            #def copy_to_onedrive(src_filename, year, one_drive_user, tenant_id, client_id, client_secret):
+            copy_to_onedrive(data_file,
+                             cur_date.year,
+                             options.one_drive_user,
+                             options.one_drive_tenant_id,
+                             options.one_drive_client_id,
+                             options.one_drive_secret)
         if data_file is not None:
             test_results = parse_file(data_file, today)
             email_results(options.email_server,
+                          options.server_port,
                         options.email_user,
                         options.email_pwd,
                         options.to_list.split(','),
