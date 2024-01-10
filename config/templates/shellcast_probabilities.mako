@@ -11,7 +11,7 @@
             <div class="row">
                 <div class="col-sm-12">
                     <h3><a href="${shellcast_url}">ShellCast Results</a> for ${run_date}</h3>
-                    <h3>This report will show the Lease IDs with Moderate to Very High probabilities of closure.</h3>
+                    <h3>This report will show the Lease IDs with Moderate to Very High probabilities rainfall exceeding closure threshold.</h3>
                 </div>
             </div>
             <hr class="mt-2 mb-3"/>
@@ -24,7 +24,7 @@
                     <tr>
                         <th>Lease ID</th>
                         <th>Date</th>
-                        <th>Probability Level</th>
+                        <th>Risk of Exceeding Rainfall Threshold</th>
                     </tr>
                     % for lease_id in growing_area_results:
                         % for probability in growing_area_results[lease_id]:
@@ -43,7 +43,7 @@
                     % endfor
                 </table>
                     % else:
-                    <h3>All Lease Site probabilities are Low.</h3>
+                    <h3>All Lease Site probabilities of rainfall exceeding closure threshold are low.</h3>
                     % endif
                 </div>
             </div>
