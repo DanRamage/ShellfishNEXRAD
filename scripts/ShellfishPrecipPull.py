@@ -85,17 +85,19 @@ def email_results(host, port, user, password, to_list, email_from, data_file, te
     id_keys = test_results
     all_passed = True
     for id in test_results:
-      if not test_results[id]['TestPassed']:
-        all_passed = False
-        row = "\tID: %s Date: %s Value: %s is over limit." % (id, test_results[id]['Date'].strftime('%m-%d-%Y %I:%M'), test_results[id]['Precipitation Value'])
-        message.append(row)
+      if 'TestPassed' in test_results[id]:
+          if not test_results[id]['TestPassed']:
+            all_passed = False
+            row = "\tID: %s Date: %s Value: %s is over limit." % (id, test_results[id]['Date'].strftime('%m-%d-%Y %I:%M'), test_results[id]['Precipitation Value'])
+            message.append(row)
     if all_passed:
       message.append("\tNo IDs are over the limit.")
     message.append("The following IDs are within the limit(%s in)." % (PRECIP_LIMIT))
     for id in test_results:
-      if test_results[id]['TestPassed']:
-        row = "\tID: %s Date: %s Value: %s is not over limit." % (id, test_results[id]['Date'], test_results[id]['Precipitation Value'])
-        message.append(row)
+      if 'TestPassed' in test_results[id]:
+          if test_results[id]['TestPassed']:
+            row = "\tID: %s Date: %s Value: %s is not over limit." % (id, test_results[id]['Date'], test_results[id]['Precipitation Value'])
+            message.append(row)
     if ftp_destination_file is not None:
         if len(ftp_destination_file):
             message.append("\nFTP File: %s successfully transfered" % (ftp_destination_file))
